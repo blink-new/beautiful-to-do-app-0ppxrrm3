@@ -4,7 +4,7 @@ import { TodoItem } from './TodoItem'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
-import { ListFilter, Search, X } from 'lucide-react'
+import { ListFilter, Search, X, Loader2 } from 'lucide-react'
 import { EmptyState } from './EmptyState'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
@@ -19,6 +19,8 @@ export function TodoList() {
   const categories = useTodoStore((state) => state.categories)
   const getFilteredTodos = useTodoStore((state) => state.getFilteredTodos)
   const reorderTodos = useTodoStore((state) => state.reorderTodos)
+  const isLoading = useTodoStore((state) => state.isLoading)
+  const error = useTodoStore((state) => state.error)
   
   const [filter, setFilter] = useState<FilterType>('all')
   const [categoryFilter, setCategoryFilter] = useState<TodoCategory | 'all'>('all')
@@ -34,14 +36,14 @@ export function TodoList() {
     useSensor(KeyboardSensor)
   )
   
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     
     if (over && active.id !== over.id) {
       const oldIndex = filteredTodos.findIndex(todo => todo.id === active.id)
       const newIndex = filteredTodos.findIndex(todo => todo.id === over.id)
       
-      reorderTodos(oldIndex, newIndex)
+      await reorderTodos(oldIndex, newIndex)
     }
   }
   
@@ -72,6 +74,30 @@ export function TodoList() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-lg border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300">
+        <p className="font-medium">Error loading tasks</p>
+        <p className="text-sm mt-1">{error}</p>
+        <Button 
+          variant="outline" 
+          className="mt-3 bg-white dark:bg-slate-800"
+          onClick={() => window.location.reload()}
+        >
+          Refresh page
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <motion.div
