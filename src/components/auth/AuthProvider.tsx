@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null
   isLoading: boolean
   refreshSession: () => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isLoading: true,
   refreshSession: async () => {},
+  signOut: async () => {},
 })
 
 export function useAuth() {
@@ -46,6 +48,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(data.session?.user ?? null)
     } catch (error) {
       console.error('Error refreshing session:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const signOut = async () => {
+    try {
+      setIsLoading(true)
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        console.error('Error signing out:', error)
+        toast({
+          title: 'Error signing out',
+          description: 'There was a problem signing out',
+          variant: 'destructive',
+        })
+        return
+      }
+      
+      setSession(null)
+      setUser(null)
+      
+      toast({
+        title: 'Signed out successfully',
+        description: 'You have been signed out of your account',
+      })
+    } catch (error) {
+      console.error('Exception during sign out:', error)
+      toast({
+        title: 'Error signing out',
+        description: 'There was a problem signing out',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -121,6 +157,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     isLoading,
     refreshSession,
+    signOut,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
