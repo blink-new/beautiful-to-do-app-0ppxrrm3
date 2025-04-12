@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { LogOut, Settings, User as UserIcon, AlertCircle } from 'lucide-react'
 import { useToast } from '../../hooks/use-toast'
+import { useAuth } from './AuthProvider'
 
 interface UserMenuProps {
   user: User
@@ -24,6 +25,7 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+  const { signOut } = useAuth()
 
   useEffect(() => {
     async function getProfile() {
@@ -115,19 +117,10 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut()
+      await signOut()
       onSignOut()
-      toast({
-        title: 'Signed out successfully',
-        description: 'You have been signed out of your account',
-      })
     } catch (error) {
-      console.error('Error signing out:', error)
-      toast({
-        title: 'Error signing out',
-        description: 'There was a problem signing out',
-        variant: 'destructive',
-      })
+      console.error('Error in handleSignOut:', error)
     }
   }
 
