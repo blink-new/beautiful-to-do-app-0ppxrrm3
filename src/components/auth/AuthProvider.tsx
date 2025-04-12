@@ -51,11 +51,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  // Handle auth state changes from hash fragment or local storage
   useEffect(() => {
-    // Get initial session
-    refreshSession()
-
-    // Listen for auth changes
+    // Check for auth redirect (hash fragment)
+    const handleAuthRedirect = async () => {
+      try {
+        // This will detect and exchange auth code for session if present in URL
+        const { data, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error handling auth redirect:', error)
+          return
+        }
+        
+        if (data.session) {
+          setSession(data.session)
+          setUser(data.session.user)
+          
+          // Clear the URL hash fragment after successful auth
+          if (window.location.hash.includes('access_token')) {
+            window.history.replaceState(null, '', window.location.pathname)
+          }
+        }
+      } catch (error) {
+        console.error('Error in handleAuthRedirect:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    handleAuthRedirect()
+    
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log('Auth state changed:', event)
       
