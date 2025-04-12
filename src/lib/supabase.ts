@@ -12,7 +12,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // Enables detecting auth redirects
-    flowType: 'pkce', // Use PKCE flow for better security
+    // Remove flowType to use the default implicit flow
   },
   global: {
     headers: {
@@ -51,5 +51,25 @@ export async function getCurrentUser() {
   } catch (error) {
     console.error('Error in getCurrentUser:', error)
     return null
+  }
+}
+
+// Direct sign in helper (for debugging)
+export async function signInWithEmail(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    
+    if (error) {
+      console.error('Sign in error:', error)
+      return { user: null, error: error.message }
+    }
+    
+    return { user: data.user, error: null }
+  } catch (error) {
+    console.error('Exception during sign in:', error)
+    return { user: null, error: 'An unexpected error occurred' }
   }
 }
