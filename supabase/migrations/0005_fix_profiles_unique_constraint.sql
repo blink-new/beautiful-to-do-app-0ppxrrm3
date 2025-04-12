@@ -2,9 +2,9 @@
 -- Drop the unique constraint on username to allow multiple users with the same email
 ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_key;
 
--- Add a partial unique constraint that only applies to non-null usernames
--- This allows multiple NULL usernames and prevents duplicates for custom usernames
-ALTER TABLE profiles ADD CONSTRAINT profiles_username_key UNIQUE (username) 
+-- Create a partial index instead of a constraint to allow multiple NULL usernames
+-- This prevents duplicates for custom usernames while allowing multiple users with NULL username
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_unique_idx ON profiles (username)
 WHERE username IS NOT NULL;
 
 -- Update the trigger function to handle conflicts better
