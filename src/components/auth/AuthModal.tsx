@@ -6,6 +6,7 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { supabase } from '../../lib/supabase'
 import { UserCircle } from 'lucide-react'
+import { useToast } from '../../hooks/use-toast'
 
 interface AuthModalProps {
   onAuthSuccess?: () => void
@@ -13,12 +14,24 @@ interface AuthModalProps {
 
 export function AuthModal({ onAuthSuccess }: AuthModalProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const { toast } = useToast()
 
   const handleAuthSuccess = () => {
     if (onAuthSuccess) {
       onAuthSuccess()
     }
     setIsOpen(false)
+    
+    // No need to show toast here as it's handled in AuthProvider
+  }
+
+  const handleAuthError = (error: Error) => {
+    console.error('Authentication error:', error)
+    toast({
+      title: 'Authentication error',
+      description: error.message || 'There was a problem with authentication',
+      variant: 'destructive',
+    })
   }
 
   return (
@@ -36,7 +49,17 @@ export function AuthModal({ onAuthSuccess }: AuthModalProps) {
         <div className="py-4">
           <Auth
             supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
+            appearance={{ 
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    brand: '#4f46e5',
+                    brandAccent: '#4338ca',
+                  },
+                },
+              },
+            }}
             providers={[]}
             redirectTo={window.location.origin}
             onlyThirdPartyProviders={false}
@@ -44,6 +67,7 @@ export function AuthModal({ onAuthSuccess }: AuthModalProps) {
             view="sign_in"
             showLinks={true}
             onSuccess={handleAuthSuccess}
+            onError={handleAuthError}
           />
         </div>
       </DialogContent>
