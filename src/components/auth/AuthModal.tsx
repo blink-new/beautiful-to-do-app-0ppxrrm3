@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Auth } from '@supabase/auth-ui-react'
@@ -14,15 +14,21 @@ interface AuthModalProps {
 
 export function AuthModal({ onAuthSuccess }: AuthModalProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [redirectUrl, setRedirectUrl] = useState<string>('')
   const { toast } = useToast()
+
+  // Set the redirect URL based on the current environment
+  useEffect(() => {
+    // Get the current URL
+    const currentUrl = window.location.origin
+    setRedirectUrl(currentUrl)
+  }, [])
 
   const handleAuthSuccess = () => {
     if (onAuthSuccess) {
       onAuthSuccess()
     }
     setIsOpen(false)
-    
-    // No need to show toast here as it's handled in AuthProvider
   }
 
   const handleAuthError = (error: Error) => {
@@ -47,28 +53,30 @@ export function AuthModal({ onAuthSuccess }: AuthModalProps) {
           <DialogTitle>Sign In / Sign Up</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <Auth
-            supabaseClient={supabase}
-            appearance={{ 
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: '#4f46e5',
-                    brandAccent: '#4338ca',
+          {redirectUrl && (
+            <Auth
+              supabaseClient={supabase}
+              appearance={{ 
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: '#4f46e5',
+                      brandAccent: '#4338ca',
+                    },
                   },
                 },
-              },
-            }}
-            providers={[]}
-            redirectTo={window.location.origin}
-            onlyThirdPartyProviders={false}
-            magicLink={false}
-            view="sign_in"
-            showLinks={true}
-            onSuccess={handleAuthSuccess}
-            onError={handleAuthError}
-          />
+              }}
+              providers={[]}
+              redirectTo={redirectUrl}
+              onlyThirdPartyProviders={false}
+              magicLink={false}
+              view="sign_in"
+              showLinks={true}
+              onSuccess={handleAuthSuccess}
+              onError={handleAuthError}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
