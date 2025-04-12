@@ -38,18 +38,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { data, error } = await supabase.auth.getSession()
       
       if (error) {
-        throw error
+        console.error('Error refreshing session:', error)
+        return
       }
       
       setSession(data.session)
       setUser(data.session?.user ?? null)
     } catch (error) {
       console.error('Error refreshing session:', error)
-      toast({
-        title: 'Authentication error',
-        description: 'There was a problem with your session',
-        variant: 'destructive',
-      })
     } finally {
       setIsLoading(false)
     }
@@ -60,16 +56,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     refreshSession()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('Auth state changed:', event)
+      
+      setSession(newSession)
+      setUser(newSession?.user ?? null)
+      
+      if (event === 'SIGNED_IN') {
+        toast({
+          title: 'Signed in successfully',
+          description: `Welcome${newSession?.user?.email ? ` ${newSession.user.email}` : ''}!`,
+        })
+      } else if (event === 'SIGNED_OUT') {
+        // We handle this in the sign-out function
+      } else if (event === 'USER_UPDATED') {
+        toast({
+          title: 'Profile updated',
+          description: 'Your profile has been updated',
+        })
+      } else if (event === 'PASSWORD_RECOVERY') {
+        toast({
+          title: 'Password recovery initiated',
+          description: 'Please check your email for password reset instructions',
+        })
+      }
+      
       setIsLoading(false)
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [toast])
 
   const value = {
     user,
