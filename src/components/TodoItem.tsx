@@ -31,23 +31,23 @@ export function TodoItem({ todo, isDragging = false }: TodoItemProps) {
   const categories = useTodoStore((state) => state.categories)
   const { toast } = useToast()
 
-  const handleToggle = () => {
-    toggleTodo(todo.id)
+  const handleToggle = async () => {
+    await toggleTodo(todo.id)
     toast({
       title: todo.completed ? "Task marked as active" : "Task completed",
       description: todo.text,
     })
   }
 
-  const handleRemove = () => {
-    removeTodo(todo.id)
+  const handleRemove = async () => {
+    await removeTodo(todo.id)
     toast({
       title: "Task removed",
       description: "The task has been deleted",
     })
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editText.trim()) {
       toast({
         title: "Task cannot be empty",
@@ -57,7 +57,7 @@ export function TodoItem({ todo, isDragging = false }: TodoItemProps) {
       return
     }
     
-    editTodo(todo.id, editText, editPriority, editCategory, editDueDate)
+    await editTodo(todo.id, editText, editPriority, editCategory, editDueDate)
     setIsEditing(false)
     
     toast({
