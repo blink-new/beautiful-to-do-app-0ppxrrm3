@@ -19,12 +19,13 @@ export function AddTodo() {
   const [category, setCategory] = useState<TodoCategory>('personal')
   const [dueDate, setDueDate] = useState<Date | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const addTodo = useTodoStore((state) => state.addTodo)
   const categories = useTodoStore((state) => state.categories)
   const { toast } = useToast()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!text.trim()) {
@@ -36,14 +37,27 @@ export function AddTodo() {
       return
     }
     
-    addTodo(text.trim(), priority, category, dueDate)
-    setText('')
-    setDueDate(null)
+    setIsSubmitting(true)
     
-    toast({
-      title: "Task added",
-      description: "Your new task has been added",
-    })
+    try {
+      await addTodo(text.trim(), priority, category, dueDate)
+      setText('')
+      setDueDate(null)
+      
+      toast({
+        title: "Task added",
+        description: "Your new task has been added",
+      })
+    } catch (error) {
+      toast({
+        title: "Failed to add task",
+        description: "There was an error adding your task",
+        variant: "destructive",
+      })
+      console.error(error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -62,10 +76,27 @@ export function AddTodo() {
             onChange={(e) => setText(e.target.value)}
             onFocus={() => setIsExpanded(true)}
             className="flex-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+            disabled={isSubmitting}
           />
-          <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add
+          <Button 
+            type="submit" 
+            className="bg-indigo-600 hover:bg-indigo-700"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Adding...
+              </span>
+            ) : (
+              <>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add
+              </>
+            )}
           </Button>
         </div>
         
@@ -85,6 +116,7 @@ export function AddTodo() {
                 value={priority} 
                 onValueChange={(value) => setPriority(value as TodoPriority)}
                 className="flex space-x-4"
+                disabled={isSubmitting}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="low" id="low" />
@@ -103,7 +135,11 @@ export function AddTodo() {
             
             <div>
               <Label className="text-sm text-slate-500 dark:text-slate-400 mb-2 block">Category</Label>
-              <Select value={category} onValueChange={(value) => setCategory(value as TodoCategory)}>
+              <Select 
+                value={category} 
+                onValueChange={(value) => setCategory(value as TodoCategory)}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
@@ -124,6 +160,7 @@ export function AddTodo() {
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
+                    disabled={isSubmitting}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
@@ -135,6 +172,7 @@ export function AddTodo() {
                     selected={dueDate}
                     onSelect={setDueDate}
                     initialFocus
+                    disabled={isSubmitting}
                   />
                 </PopoverContent>
               </Popover>
