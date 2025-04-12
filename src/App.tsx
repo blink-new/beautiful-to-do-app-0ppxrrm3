@@ -43,6 +43,11 @@ function AppContent() {
 
   const isLoading = authLoading || (user && todosLoading && !isInitialized)
 
+  const handleSignOut = () => {
+    // Reset the store's user state
+    setUser(null)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="container mx-auto px-4 py-4 max-w-3xl">
@@ -50,7 +55,7 @@ function AppContent() {
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
           ) : user ? (
-            <UserMenu user={user} onSignOut={() => {}} />
+            <UserMenu user={user} onSignOut={handleSignOut} />
           ) : (
             <AuthModal onAuthSuccess={() => fetchTodos()} />
           )}
