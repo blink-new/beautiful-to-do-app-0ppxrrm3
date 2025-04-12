@@ -66,7 +66,8 @@
     "@dnd-kit/modifiers": "latest",
     "@supabase/supabase-js": "latest",
     "@supabase/auth-ui-react": "latest",
-    "@supabase/auth-ui-shared": "latest"
+    "@supabase/auth-ui-shared": "latest",
+    "@hookstate/core": "latest"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

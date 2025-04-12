@@ -12,7 +12,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // Enables detecting auth redirects
-    // Remove flowType to use the default implicit flow
   },
   global: {
     headers: {
@@ -54,7 +53,40 @@ export async function getCurrentUser() {
   }
 }
 
-// Direct sign in helper (for debugging)
+// Helper function to sign up a new user
+export async function signUpWithEmail(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        // Don't use redirectTo to avoid the 500 error
+        data: {
+          full_name: email.split('@')[0], // Use part of email as name
+        }
+      }
+    })
+    
+    if (error) {
+      return { user: null, session: null, error: error.message }
+    }
+    
+    return { 
+      user: data.user, 
+      session: data.session,
+      error: null 
+    }
+  } catch (error: any) {
+    console.error('Exception during sign up:', error)
+    return { 
+      user: null, 
+      session: null,
+      error: error.message || 'An unexpected error occurred' 
+    }
+  }
+}
+
+// Helper function to sign in a user
 export async function signInWithEmail(email: string, password: string) {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -63,13 +95,36 @@ export async function signInWithEmail(email: string, password: string) {
     })
     
     if (error) {
-      console.error('Sign in error:', error)
-      return { user: null, error: error.message }
+      return { user: null, session: null, error: error.message }
     }
     
-    return { user: data.user, error: null }
-  } catch (error) {
+    return { 
+      user: data.user, 
+      session: data.session,
+      error: null 
+    }
+  } catch (error: any) {
     console.error('Exception during sign in:', error)
-    return { user: null, error: 'An unexpected error occurred' }
+    return { 
+      user: null, 
+      session: null,
+      error: error.message || 'An unexpected error occurred' 
+    }
+  }
+}
+
+// Helper function to sign out
+export async function signOut() {
+  try {
+    const { error } = await supabase.auth.signOut()
+    
+    if (error) {
+      return { error: error.message }
+    }
+    
+    return { error: null }
+  } catch (error: any) {
+    console.error('Exception during sign out:', error)
+    return { error: error.message || 'An unexpected error occurred' }
   }
 }
