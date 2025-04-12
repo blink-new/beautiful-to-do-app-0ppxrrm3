@@ -12,7 +12,7 @@ import { useTodoStore } from './lib/store'
 import { Loader2 } from 'lucide-react'
 
 function AppContent() {
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, refreshSession } = useAuth()
   const { fetchTodos, setUser, isLoading: todosLoading } = useTodoStore()
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -21,7 +21,9 @@ function AppContent() {
     setUser(user)
     
     if (user) {
-      fetchTodos()
+      fetchTodos().catch(error => {
+        console.error('Error fetching todos:', error)
+      })
     }
     
     setIsInitialized(true)
@@ -48,6 +50,13 @@ function AppContent() {
     setUser(null)
   }
 
+  const handleAuthSuccess = async () => {
+    // Refresh the session to get the latest user data
+    await refreshSession()
+    // Fetch todos for the newly authenticated user
+    await fetchTodos()
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="container mx-auto px-4 py-4 max-w-3xl">
@@ -57,7 +66,7 @@ function AppContent() {
           ) : user ? (
             <UserMenu user={user} onSignOut={handleSignOut} />
           ) : (
-            <AuthModal onAuthSuccess={() => fetchTodos()} />
+            <AuthModal onAuthSuccess={handleAuthSuccess} />
           )}
         </div>
         
@@ -88,7 +97,7 @@ function AppContent() {
               <p className="text-slate-600 dark:text-slate-400 mb-6">
                 Sign in to start managing your tasks with style
               </p>
-              <AuthModal />
+              <AuthModal onAuthSuccess={handleAuthSuccess} />
             </div>
           )}
           
