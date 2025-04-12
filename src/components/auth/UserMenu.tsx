@@ -31,7 +31,7 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
         setIsLoading(true)
         setError(null)
         
-        // Check if the profile exists
+        // Try to get the profile first
         const { data, error: fetchError } = await supabase
           .from('profiles')
           .select('username, full_name, avatar_url')
@@ -39,42 +39,79 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
           .maybeSingle()
 
         if (fetchError) {
-          throw fetchError
+          console.error('Error fetching profile:', fetchError)
+          // Continue to try to create/update the profile
         }
 
         if (data) {
+          // Profile exists, use it
           setProfile(data)
         } else {
-          // If profile doesn't exist, create one
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert([
-              { 
-                id: user.id,
-                username: user.email,
-                full_name: user.user_metadata?.full_name || null,
-                avatar_url: user.user_metadata?.avatar_url || null
+          // Profile doesn't exist or couldn't be fetched, try to upsert it
+          try {
+            const { data: upsertData, error: upsertError } = await supabase
+              .from('profiles')
+              .upsert(
+                {
+                  id: user.id,
+                  username: user.email,
+                  full_name: user.user_metadata?.full_name || null,
+                  avatar_url: user.user_metadata?.avatar_url || null
+                },
+                {
+                  onConflict: 'id',
+                  ignoreDuplicates: false
+                }
+              )
+              .select('username, full_name, avatar_url')
+              .single()
+
+            if (upsertError) {
+              // If upsert fails, try one more time to get the profile
+              // This handles the case where the profile exists but we couldn't fetch it initially
+              const { data: retryData, error: retryError } = await supabase
+                .from('profiles')
+                .select('username, full_name, avatar_url')
+                .eq('id', user.id)
+                .single()
+
+              if (retryError) {
+                throw retryError
               }
-            ])
-            .select('username, full_name, avatar_url')
-            .single()
 
-          if (insertError) {
-            throw insertError
+              setProfile(retryData)
+            } else if (upsertData) {
+              setProfile(upsertData)
+            }
+          } catch (upsertError) {
+            console.error('Error upserting profile:', upsertError)
+            // Use a fallback profile based on user data
+            setProfile({
+              username: user.email,
+              full_name: user.user_metadata?.full_name || null,
+              avatar_url: user.user_metadata?.avatar_url || null
+            })
+            setError('Could not save profile')
           }
-
-          setProfile(newProfile)
         }
       } catch (error) {
-        console.error('Error fetching/creating profile:', error)
+        console.error('Error in profile management:', error)
+        // Use a fallback profile based on user data
+        setProfile({
+          username: user.email,
+          full_name: user.user_metadata?.full_name || null,
+          avatar_url: user.user_metadata?.avatar_url || null
+        })
         setError('Failed to load profile')
       } finally {
         setIsLoading(false)
       }
     }
 
-    getProfile()
-  }, [user.id, user.email, user.user_metadata])
+    if (user) {
+      getProfile()
+    }
+  }, [user])
 
   const handleSignOut = async () => {
     try {
