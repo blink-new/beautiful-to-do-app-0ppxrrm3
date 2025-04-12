@@ -5,7 +5,7 @@ import { User } from '@supabase/supabase-js'
 import { Button } from '../ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
-import { LogOut, Settings, User as UserIcon } from 'lucide-react'
+import { LogOut, Settings, User as UserIcon, AlertCircle } from 'lucide-react'
 import { useToast } from '../../hooks/use-toast'
 
 interface UserMenuProps {
@@ -21,29 +21,60 @@ interface Profile {
 
 export function UserMenu({ user, onSignOut }: UserMenuProps) {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     async function getProfile() {
       try {
-        const { data, error } = await supabase
+        setIsLoading(true)
+        setError(null)
+        
+        // Check if the profile exists
+        const { data, error: fetchError } = await supabase
           .from('profiles')
           .select('username, full_name, avatar_url')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
 
-        if (error) {
-          throw error
+        if (fetchError) {
+          throw fetchError
         }
 
-        setProfile(data)
+        if (data) {
+          setProfile(data)
+        } else {
+          // If profile doesn't exist, create one
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: user.id,
+                username: user.email,
+                full_name: user.user_metadata?.full_name || null,
+                avatar_url: user.user_metadata?.avatar_url || null
+              }
+            ])
+            .select('username, full_name, avatar_url')
+            .single()
+
+          if (insertError) {
+            throw insertError
+          }
+
+          setProfile(newProfile)
+        }
       } catch (error) {
-        console.error('Error fetching profile:', error)
+        console.error('Error fetching/creating profile:', error)
+        setError('Failed to load profile')
+      } finally {
+        setIsLoading(false)
       }
     }
 
     getProfile()
-  }, [user.id])
+  }, [user.id, user.email, user.user_metadata])
 
   const handleSignOut = async () => {
     try {
@@ -63,6 +94,7 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
     }
   }
 
+  // Fallback to user email if profile data is not available
   const displayName = profile?.full_name || profile?.username || user.email || 'User'
   const initials = displayName.substring(0, 2).toUpperCase()
 
@@ -71,9 +103,20 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar>
-            <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
-            <AvatarFallback>{initials}</AvatarFallback>
+            {isLoading ? (
+              <AvatarFallback className="animate-pulse bg-slate-200 dark:bg-slate-700"></AvatarFallback>
+            ) : (
+              <>
+                <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </>
+            )}
           </Avatar>
+          {error && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center">
+              <AlertCircle className="h-3 w-3 text-white" />
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -81,6 +124,11 @@ export function UserMenu({ user, onSignOut }: UserMenuProps) {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            {error && (
+              <p className="text-xs text-red-500 mt-1">
+                {error}
+              </p>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
