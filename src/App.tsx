@@ -43,6 +43,19 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Check for auth in URL on initial load
+  useEffect(() => {
+    const checkAuthInUrl = async () => {
+      // If URL contains auth parameters, refresh the session
+      if (window.location.hash.includes('access_token') || 
+          window.location.search.includes('code=')) {
+        await refreshSession()
+      }
+    }
+    
+    checkAuthInUrl()
+  }, [refreshSession])
+
   const isLoading = authLoading || (user && todosLoading && !isInitialized)
 
   const handleSignOut = () => {
@@ -54,7 +67,9 @@ function AppContent() {
     // Refresh the session to get the latest user data
     await refreshSession()
     // Fetch todos for the newly authenticated user
-    await fetchTodos()
+    if (user) {
+      await fetchTodos()
+    }
   }
 
   return (
